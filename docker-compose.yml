@@ -1,0 +1,44 @@
+services:
+  callioapi:
+    image: ghcr.io/project-callio/callioapi:latest
+    command: "callioapi"
+    environment:
+      RUST_LOG: info,callioapi=info
+      SECRET_KEY: testkey
+      DATABASE_URL: postgres://callioapi:callioapipwd@pgsql:5432/callio
+      NATS_USERNAME: callioapi
+      NATS_PASSWORD: callioapipwd
+      NATS_URL: nats://nats:4222
+    ports:
+      - 8000:8000
+    depends_on:
+      - pgsql
+      - nats
+  callioui:
+    image: ghcr.io/project-callio/callioui:latest
+    environment:
+      NEXT_PUBLIC_CALLIO_API_HOST: http://localhost:8000/api
+    ports:
+      - 3000:3000
+    depends_on:
+      - callioapi
+  pgsql:
+    image: postgres:12-alpine
+    restart: on-failure
+    environment:
+      POSTGRES_USER: callioapi
+      POSTGRES_PASSWORD: callioapipwd
+      POSTGRES_DB: callio
+    volumes:
+    - "calliodb:/var/lib/postgresql/data"
+  nats:
+    image: nats:2.1
+    command: ["--config", "/custom/nats-server.conf"]
+    restart: on-failure
+    ports:
+    - 8222:8222
+    volumes:
+      - "./resources:/custom:z"
+
+volumes:
+  calliodb:
